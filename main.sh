@@ -129,7 +129,7 @@ datadir=/home/garner1/Work/dataset/rest2vec
 # wd=$PWD
 # cd $datadir/reference_docs
 # rm -f $datadir/reference_docs/*
-# awk '{print $11 >> $1"_"$4"_"$10}' $datadir/binned_refdocs.tsv
+# awk '{print substr($11,1,60) >> $1"_"$4"_"$10}' $datadir/binned_refdocs.tsv
 # cd $wd
 
 # echo "Create the cutsite documents on the restseq dataset ..."
@@ -146,4 +146,58 @@ datadir=/home/garner1/Work/dataset/rest2vec
 #     parallel "awk '{print \$3 >> \$1\"_\"\$2}' {}" ::: *.binned
 # done
 
-#NOW YOU NEED TO TOKENIZE THE BINNED DOCUMENTS AND PREPARE THE WORD COUNTS
+###################################
+# TOKENIZE DATA
+wd=$PWD
+# for dir in $( ls $datadir/restseq_plus );do
+#     echo $dir
+#     cd $datadir/restseq_plus/$dir
+#     rm -f *.txt
+#     for chr in $( seq 24 );do
+# 	if [ $chr == 23 ] 
+# 	then 
+# 	    chr=X
+# 	fi
+# 	if [ $chr == 24 ] 
+# 	then 
+# 	    chr=Y
+# 	fi
+# 	echo chr$chr
+# 	parallel "$wd/mean {} $datadir/6mer_plus/chr$chr.table.tsv | cut -d' ' -f2- > {}.txt" ::: chr"$chr"_*
+#     done
+# done
+
+# for dir in $( ls $datadir/restseq_minus );do
+#     echo $dir
+#     cd $datadir/restseq_minus/$dir
+#     rm -f *.txt
+#     for chr in $( seq 24 );do
+# 	if [ $chr == 23 ] 
+# 	then 
+# 	    chr=X
+# 	fi
+# 	if [ $chr == 24 ] 
+# 	then 
+# 	    chr=Y
+# 	fi
+# 	echo chr$chr
+# 	parallel "$wd/mean {} $datadir/6mer_minus/chr$chr.table.tsv | cut -d' ' -f2- > {}.txt" ::: chr"$chr"_*
+#     done
+# done
+
+# cd $datadir/reference_docs
+# rm -f *.txt
+# for chr in $( seq 24 );do
+#     if [ $chr == 23 ] 
+#     then 
+# 	chr=X
+#     fi
+#     if [ $chr == 24 ] 
+#     then 
+# 	chr=Y
+#     fi
+#     echo chr$chr
+#     parallel "$wd/mean {} $datadir/6mer_plus/chr$chr.table.tsv | cut -d' ' -f2- > {}.txt" ::: chr"$chr"_*_+
+#     parallel "$wd/mean {} $datadir/6mer_minus/chr$chr.table.tsv | cut -d' ' -f2- > {}.txt" ::: chr"$chr"_*_-
+# done
+################################################
