@@ -151,18 +151,8 @@ int main ( int argc, char* argv[] )
       sum = accumulate( profile6.begin()+(k-1), profile6.end(), 0.0 );
       sumvec.push_back( sum/(1.0*(read.size()-k+1)) ); // evaluate the numb of bits per effective read length 
 
-      // // Find the optimal kmer size
-      // auto smallest = min_element(begin(sumvec), end(sumvec));
-      // location = distance(begin(sumvec), smallest);
-      // k = 1*location + 11;
-
-      // Select the optimal profile for the read
       if ( k == 6 )
       	selection = profile6;
-      if ( k == 11 )
-      	selection = profile11;
-      if ( k == 12 )
-      	selection = profile12;
 
       vector<float> y = selection;
       int context = k-1;
