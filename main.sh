@@ -37,18 +37,21 @@ datadir=/home/garner1/Work/dataset/rest2vec
 # cd /home/garner1/Work/dataset/restseq/xz37/outdata
 # parallel "cut -f2,3,4,7 {} > {.}.bed" ::: ????????.tsv # get a bed file format from experiment data
 # parallel "bedtools getfasta -fi $fastafile -bed {} -bedOut > {.}.exp_ref.bed " ::: ????????.bed # get location, experimental-seq and reference-seq
-# parallel "awk '{print \$1,\$2-25,\$3+25}' {} | awk '\$2 > 0'|tr ' ' '\t' > {.}.extended" ::: ????????.exp_ref.bed # enlarge the location
+# parallel "awk '{print \$1,\$2-25,\$3+25}' {} | awk '\$2 > 0'|tr ' ' '\t' > {.}.extended" ::: ????????.exp_ref.bed # enlarge the location 
 # parallel "bedtools getfasta -fi $fastafile -bed {} -bedOut | awk '{print \$1,\$2,\$3,substr(\$4,1,25),substr(\$4,length(\$4)-24,length(\$4))}'|tr ' ' '\t'> {}.seq " ::: ????????.exp_ref.extended # enlarge the reference sequence
 # parallel "paste {.}.extended.seq {} | awk '{print \$1,\$2,\$3,\$4\$9\$5,\$4\$10\$5}'| tr ' ' '\t' > {}.doc " ::: ????????.exp_ref.bed # enlarged locations,experimental sequence and reference sequence
 # cd $wd
 
 ####################################################
-# # PREPARE A LIST OF 200bp REGIONS CENTERED AT THE CUTSITE, IN THE + AND - STRAND 
+####################################################
+####################################################
+# CONSTRUCT THE WORD EMBEDDING FROM REFERENCE GENOME
+####################################################
+# # PREPARE A LIST OF 200bp REGIONS CENTERED AT THE CUTSITE, IN THE + STRAND 
 # echo "Prepare extended feature bedfile ..."
-# awk '{OFS="\t";print $1,$2-100,$2+100,"forward","1","+"}' $bedfile | awk '$2 > 0' | LC_ALL=C sort -k1,1 -k2,2n > $datadir/forward.bed
+# awk '{OFS="\t";print $1,$2-100,$2+100,"forward","1","+"}' $bedfile | awk '$2 > 0' | #remove negative locations
+# LC_ALL=C sort -k1,1 -k2,2n > $datadir/forward.bed
 # bedtools merge -i $datadir/forward.bed -s | awk '{OFS="\t";print $1,$2,$3,"forward","1","+"}' > $datadir/forward.merged.bed # merge overlapping intervals
-
-# # PREPARE THE LIST OF SEQUENCES CENTER AT THE CUTSITE REGIONS
 # echo "Prepare extended reference document ..."
 # bedtools getfasta -fi $fastafile -bed $datadir/forward.merged.bed -bedOut -s | LC_ALL=C grep -v N > $datadir/refExtendedDoc.bed
 
@@ -57,8 +60,8 @@ datadir=/home/garner1/Work/dataset/rest2vec
 # mkdir -p "$datadir"/aux_plus
 # wd=$PWD                                                                                                                                                     
 # cd "$datadir/aux_plus"
-# awk '$6 == "+"' ../refExtendedDoc.bed | awk '{print $7 >> $1; close($1)}' - # SPLIT BY CHROMOSOME
-# parallel "sed -i 's/$/NNNNNN/' {}" ::: chr*
+# awk '{print $7 >> $1; close($1)}' $datadir/refExtendedDoc.bed # SPLIT BY CHROMOSOME
+# parallel "sed -i 's/$/NNNNNN/' {}" ::: chr* #introduce the Ns to count the kmers
 # cd $wd
 
 # echo "Count kmers ..."   
@@ -84,96 +87,41 @@ datadir=/home/garner1/Work/dataset/rest2vec
 # wd=$PWD
 # cd "$datadir"/aux_plus
 # parallel "sed -i 's/NNNNNN//' {}" ::: chr*
-# time parallel "$wd/mean {} ../6mer_plus/{.}.table.tsv | cut -d' ' -f2- > ../docs_plus/{.}.txt" ::: chr*
+# time parallel "$wd/mean {} ../6mer_plus/{.}.table.tsv | cut -d' ' -f2- > ../docs_plus/{.}.txt" ::: chr* # it takes approx 6 min
 # cd $wd
 
-echo "Run word2vec on the reference corpus ..."
-time python word2vector.py $datadir/docs_plus $datadir/modelPlus 
-# ################################
-
-# echo "Bin the genome ..."
-# window=1000000
-# genome=hg19
-# sliding=500000
-# bash ~/Work/pipelines/aux.scripts/fetchChromSizes.sh $genome | grep -v "_" > sizes
-# bedtools makewindows -g sizes -w "$window" -s "$sliding" -i winnum > $datadir/"$window"_"$genome"
-# rm -f sizes
-
-# echo "Create the cutsite documents on the reference genome ..."
-# bedtools intersect -a $datadir/1000000_hg19 -b $datadir/refdocs.bed -wa -wb > $datadir/binned_refdocs.tsv
-# mkdir -p $datadir/reference_docs
-# wd=$PWD
-# cd $datadir/reference_docs
-# rm -f $datadir/reference_docs/*
-# awk '{print substr($11,1,60) >> $1"_"$4"_"$10}' $datadir/binned_refdocs.tsv
-# cd $wd
-
-# echo "Create the cutsite documents on the restseq dataset ..."
-# parallel "cat {} |awk '{OFS=\"\t\"; print \$2,\$3,\$4,\$5,\$6,\$7,\$1}'|bedtools intersect -a $datadir/1000000_hg19 -b - -wa -wb|cut -f1,4,10 > {}.binned" ::: $datadir/restseq_{plus,minus}/*/chr{?,??}
-
-# for dir in $( ls $datadir/restseq_plus );do
-#     echo $dir
-#     cd $datadir/restseq_plus/$dir
-#     parallel "awk '{print \$3 >> \$1\"_\"\$2}' {}" ::: *.binned
-# done
-# for dir in $( ls $datadir/restseq_minus );do
-#     echo $dir
-#     cd $datadir/restseq_minus/$dir
-#     parallel "awk '{print \$3 >> \$1\"_\"\$2}' {}" ::: *.binned
-# done
-
-###################################
+# echo "Run word2vec on the reference corpus ..."
+# time python word2vector.py $datadir/docs_plus $datadir/modelPlus 
+################################
+################################
+################################
+################################
 # TOKENIZE DATA
+
+# wd=$PWD
+# cd /home/garner1/Work/dataset/restseq/xz37/outdata
+# mkdir -p $datadir/restseq_plus
+# for file in $( ls ????????.exp_ref.bed.doc ); do
+#     barcode=`echo $file | cut -d'.' -f1`
+#     echo $barcode
+#     mkdir -p $barcode
+#     cd $barcode
+#     rm -f chr*
+#     awk '{print $4 >> $1".experimental"; print $5 >> $1".reference"; print $1,$2,$3 >> $1".locations"}' /home/garner1/Work/dataset/restseq/xz37/outdata/"$barcode".exp_ref.bed.doc
+#     cd ..
+#     mv $barcode $datadir/restseq_plus
+# done
+# cd $wd
+
 # wd=$PWD
 # for dir in $( ls $datadir/restseq_plus );do
 #     echo $dir
 #     cd $datadir/restseq_plus/$dir
 #     rm -f *.txt
-#     for chr in $( seq 24 );do
-# 	if [ $chr == 23 ] 
-# 	then 
-# 	    chr=X
-# 	fi
-# 	if [ $chr == 24 ] 
-# 	then 
-# 	    chr=Y
-# 	fi
-# 	echo chr$chr
-# 	parallel "$wd/mean {} $datadir/6mer_plus/chr$chr.table.tsv | cut -d' ' -f2- > {}.txt" ::: chr"$chr"_*
-#     done
+#     parallel "$wd/mean {} $datadir/6mer_plus/{.}.table.tsv | cut -d' ' -f2- > {}.txt" ::: *.{experimental,reference}
+#     parallel "paste -d '|' {} {.}.experimental.txt {.}.reference.txt > {.}.loc-docs" ::: chr*.locations
 # done
+# cd $wd
 
-# for dir in $( ls $datadir/restseq_minus );do
-#     echo $dir
-#     cd $datadir/restseq_minus/$dir
-#     rm -f *.txt
-#     for chr in $( seq 24 );do
-# 	if [ $chr == 23 ] 
-# 	then 
-# 	    chr=X
-# 	fi
-# 	if [ $chr == 24 ] 
-# 	then 
-# 	    chr=Y
-# 	fi
-# 	echo chr$chr
-# 	parallel "$wd/mean {} $datadir/6mer_minus/chr$chr.table.tsv | cut -d' ' -f2- > {}.txt" ::: chr"$chr"_*
-#     done
-# done
-
-# cd $datadir/reference_docs
-# rm -f *.txt
-# for chr in $( seq 24 );do
-#     if [ $chr == 23 ] 
-#     then 
-# 	chr=X
-#     fi
-#     if [ $chr == 24 ] 
-#     then 
-# 	chr=Y
-#     fi
-#     echo chr$chr
-#     parallel "$wd/mean {} $datadir/6mer_plus/chr$chr.table.tsv | cut -d' ' -f2- > {}.txt" ::: chr"$chr"_*_+
-#     parallel "$wd/mean {} $datadir/6mer_minus/chr$chr.table.tsv | cut -d' ' -f2- > {}.txt" ::: chr"$chr"_*_-
-# done
+# WRITE PYTHON CODE TO PROCESS *.loc-docs files
 ################################################
