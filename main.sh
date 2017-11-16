@@ -119,9 +119,33 @@ datadir=/home/garner1/Work/dataset/rest2vec
 #     cd $datadir/restseq_plus/$dir
 #     rm -f *.txt
 #     parallel "$wd/mean {} $datadir/6mer_plus/{.}.table.tsv | cut -d' ' -f2- > {}.txt" ::: *.{experimental,reference}
-#     parallel "paste -d '|' {} {.}.experimental.txt {.}.reference.txt > {.}.loc-docs" ::: chr*.locations
+#     parallel "paste -d '|' {} {.}.experimental.txt {.}.reference.txt | LC_ALL=C sort -k2,2n > {.}.loc-docs" ::: chr*.locations
 # done
 # cd $wd
 
-# WRITE PYTHON CODE TO PROCESS *.loc-docs files
-################################################
+# wd=$PWD
+# for dir in $( ls $datadir/restseq_plus );do
+#     echo $dir
+#     cd $datadir/restseq_plus/$dir
+#     parallel "python $wd/compare-experiment2reference.py {}" ::: chr{?,??}.loc-docs
+#     parallel "paste {} {.}.loc-docs.signal | tr ' ' '\t' > {.}.signal.bed" ::: chr{?,??}.locations
+# done
+# cd $wd
+
+# echo "Bin the genome ..."
+window=10000000
+genome=hg19
+sliding=1000000
+bash ~/Work/pipelines/aux.scripts/fetchChromSizes.sh $genome | grep -v "_" > sizes
+bedtools makewindows -g sizes -w "$window" -s "$sliding" -i winnum > $datadir/"$window"_"$genome"
+rm -f sizes
+
+echo "Create the cutsite documents on the reference genome ..."
+wd=$PWD
+for dir in $( ls $datadir/restseq_plus );do
+    echo $dir
+    cd $datadir/restseq_plus/$dir
+    parallel "grep -v 'nan' {} | sponge {}" ::: chr*.signal.bed
+    parallel "bedtools intersect -a $datadir/"$window"_"$genome" -b {} -wa -wb | tr '.' ','|datamash -s -g 1,2,3 sum 8 | tr ',' '.' > {}.binned" ::: chr*.signal.bed
+done
+cd $wd
