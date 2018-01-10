@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-bedfile=$1
+bedfile=$1			# cutsite bedfile
 datadir=$2
-fastafile=$3
+fastafile=$3			# reference genome
 
 # CONSTRUCT THE WORD EMBEDDING FROM REFERENCE GENOME
 # PREPARE A LIST OF 200bp REGIONS CENTERED AT THE CUTSITE, IN THE + STRAND 
